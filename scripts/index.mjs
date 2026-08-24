@@ -5,7 +5,7 @@
 import { pathToFileURL } from 'url';
 import { preparePreRelease } from './release.mjs';
 import { repoCheck, repoFix } from './repo.mjs';
-import { buildOrDownload, buildServer, downloadServer } from './server.mjs';
+import { buildOrDownload, buildServer, copyLocalServer, downloadServer } from './server.mjs';
 
 async function main() {
     const command = process.argv[2];
@@ -26,6 +26,14 @@ async function main() {
             break;
         case 'build-or-download':
             await buildOrDownload();
+            break;
+        case 'copy-server':
+            try {
+                await copyLocalServer(args[0] || process.env.BJLS_SERVER_JARS);
+            } catch (error) {
+                console.error('Copy failed:', error.message);
+                process.exit(1);
+            }
             break;
 
         // Release commands
@@ -50,6 +58,7 @@ Commands:
     download-server                     Download Bazel JDT Language Server extension
     build-server                        Build Bazel JDT Language Server extension
     build-or-download                   Build or download Bazel JDT Language Server extension
+    copy-server <jars-dir>              Copy pre-built server jars from a local directory
 
   Release Management:
     prepare-pre-release                 Prepare pre-release version
@@ -71,6 +80,6 @@ if (import.meta.url === pathToFileURL(process.argv[1]).toString()) {
 }
 
 export {
-    buildOrDownload, buildServer, downloadServer, preparePreRelease, repoCheck, repoFix
+    buildOrDownload, buildServer, copyLocalServer, downloadServer, preparePreRelease, repoCheck, repoFix
 };
 

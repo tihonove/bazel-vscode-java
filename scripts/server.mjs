@@ -4,6 +4,7 @@
 
 /* eslint-disable no-underscore-dangle */
 
+import { execSync } from 'node:child_process';
 import fs from 'fs-extra';
 import { glob } from 'glob';
 import path from 'path';
@@ -108,6 +109,38 @@ async function buildServer() {
     }
 }
 
+// copy pre-built server jars from a local directory (e.g. a known-good snapshot);
+// every jar declared in contributes.javaExtensions must be present there
+async function copyLocalServer(jarsDir) {
+    if (!jarsDir) {
+        throw new Error('copy-server requires a directory argument (or BJLS_SERVER_JARS env var)');
+    }
+    const resolvedDir = path.resolve(jarsDir);
+    console.log(`Copying Bazel JDT Language Server jars from ${resolvedDir} ...`);
+
+    if (!fs.existsSync(resolvedDir)) {
+        throw new Error(`Server jars directory does not exist: ${resolvedDir}`);
+    }
+
+    fs.removeSync('./server');
+    fs.ensureDirSync('./server');
+
+    const missing = [];
+    for (const jarName of declaredServerJars) {
+        const source = path.join(resolvedDir, jarName);
+        if (fs.existsSync(source)) {
+            fs.copySync(source, path.join('./server', jarName));
+        } else {
+            missing.push(jarName);
+        }
+    }
+    if (missing.length > 0) {
+        throw new Error(`Missing jars in ${resolvedDir} (declared in package.json javaExtensions): ${missing.join(', ')}`);
+    }
+
+    console.log(`Successfully copied ${declaredServerJars.size} server jars`);
+}
+
 async function buildOrDownload() {
     if (!fs.existsSync(serverDir)) {
         console.log('NOTE: bazel-eclipse is not found as a sibling directory, downloading the latest snapshot of the Bazel JDT Language Server extension...');
@@ -131,12 +164,15 @@ async function main() {
         case 'build-or-download':
             await buildOrDownload();
             break;
+        case 'copy':
+            await copyLocalServer(process.argv[3] || process.env.BJLS_SERVER_JARS);
+            break;
         default:
-            console.log('Usage: node server.js [download|build|build-or-download|dev|watch]');
+            console.log('Usage: node server.js [download|build|build-or-download|copy <jars-dir>]');
             process.exit(1);
     }
 }
 
 setupMainExecution(main);
 
-export { buildOrDownload, buildServer, downloadServer };
+export { buildOrDownload, buildServer, copyLocalServer, downloadServer };

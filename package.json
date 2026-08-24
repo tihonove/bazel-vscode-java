@@ -1,19 +1,22 @@
 {
 	"name": "bazel-java",
-	"displayName": "Bazel extension for Java(TM) Language Support by Salesforce OSS",
-	"description": "Bazel support for Java Linting, Intellisense, formatting, refactoring and more...",
+	"displayName": "Bazel for Java (community fork, Bazel 9)",
+	"description": "Bazel support for Java Linting, Intellisense, formatting, refactoring and more... Fork of sfdc.bazel-vscode-java with Bazel 9 / bzlmod fixes.",
 	"author": "Salesforce OSS",
+	"contributors": [
+		"tihonove"
+	],
 	"license": "BSD-3-Clause",
 	"version": "1.4.1",
-	"publisher": "sfdc-eng",
-	"bugs": "https://github.com/salesforce/bazel-vscode-java/issues",
+	"publisher": "tihonove",
+	"bugs": "https://github.com/tihonove/bazel-vscode-java/issues",
 	"preview": true,
 	"engines": {
 		"vscode": "^1.80.0"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/salesforce/bazel-vscode-java"
+		"url": "https://github.com/tihonove/bazel-vscode-java"
 	},
 	"categories": [
 		"Programming Languages",
@@ -37,13 +40,14 @@
 	"main": "./out/src/extension.js",
 	"contributes": {
 		"javaExtensions": [
+			"./server/org.osgi.service.event.jar",
 			"./server/org.eclipse.equinox.event.jar",
 			"./server/com.github.ben-manes.caffeine.jar",
-			"./server/org.apache.velocity.engine-core.jar",
 			"./server/org.jsr-305.jar",
 			"./server/org.fusesource.jansi.jar",
 			"./server/com.google.protobuf.jar",
 			"./server/com.salesforce.bazel.importedsource.jar",
+			"./server/org.apache.velocity.engine-core.jar",
 			"./server/com.salesforce.bazel.sdk.jar",
 			"./server/com.salesforce.bazel.eclipse.core.jar",
 			"./server/com.salesforce.bazel.eclipse.jdtls.jar"
@@ -324,7 +328,7 @@
 	"scripts": {
 		"vscode:prepublish": "run-s clean esbuild:base -- --minify",
 		"build": "run-s clean build:server esbuild:base",
-		"build:server": "node scripts/index.mjs build-or-download",
+		"build:server": "node scripts/index.mjs copy-server ../../known-good/server",
 		"clean": "npx rimraf out meta.json stats.html *.vsix",
 		"esbuild:base": "tsx build.ts",
 		"esbuild:watch": "npm run esbuild:base -- --sourcemap --watch",
