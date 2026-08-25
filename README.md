@@ -51,7 +51,8 @@ Recommended settings for large repositories:
 - Disable Gradle/Maven importers if the repository contains unrelated builds:
   `"java.import.gradle.enabled": false`, `"java.import.maven.enabled": false`.
 
-[Troubleshoot tips](docs/troubleshoot.md) may be useful if it doesn't "just work".
+[Troubleshoot tips](https://github.com/eclipseguru/bazel-vscode-java/blob/main/docs/troubleshoot.md)
+from the upstream project may be useful if it doesn't "just work".
 
 ## Building
 
