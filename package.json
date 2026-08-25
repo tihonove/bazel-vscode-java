@@ -1,5 +1,5 @@
 {
-	"name": "bazel-java",
+	"name": "bazel-java-tihonove",
 	"displayName": "Bazel for Java (community fork, Bazel 9)",
 	"description": "Bazel support for Java Linting, Intellisense, formatting, refactoring and more... Fork of sfdc.bazel-vscode-java with Bazel 9 / bzlmod fixes.",
 	"author": "Salesforce OSS",
