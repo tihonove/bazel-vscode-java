@@ -17,7 +17,6 @@ export namespace Commands {
 	 */
 	export const SYNC_PROJECTS = 'java.bazel.syncProjects';
 	export const SYNC_PROJECTS_CMD = 'java.bazel.syncProjects.command';
-	export const SYNC_DIRECTORIES_ONLY = 'java.bazel.syncDirectoriesOnly.command';
 
 	/**
 	 * Connect our output window
@@ -45,7 +44,9 @@ export namespace Commands {
 
 	export const OPEN_BAZEL_PROJECT_FILE = 'bazel.projectview.open';
 
-	export const CONVERT_PROJECT_WORKSPACE = 'bazel.convert.workspace';
+	export const CLEAN_GENERATED_PROJECTS = 'bazel.cleanup.generatedProjects';
+	export const CLEAN_BUNDLE_CACHE = 'bazel.cleanup.bundleCache';
+	export const FULL_RESET = 'bazel.cleanup.fullReset';
 }
 
 export function executeJavaLanguageServerCommand<T = unknown>(

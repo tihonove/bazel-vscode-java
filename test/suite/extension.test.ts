@@ -78,12 +78,13 @@ suite('Java Language Extension - Standard', () => {
 		const commands = await vscode.commands.getCommands(true);
 		const JAVA_COMMANDS = [
 			Commands.SYNC_PROJECTS_CMD,
-			Commands.SYNC_DIRECTORIES_ONLY,
 			Commands.UPDATE_CLASSPATHS_CMD,
 			Commands.DEBUG_LS_CMD,
 			Commands.OPEN_BAZEL_BUILD_STATUS_CMD,
 			Commands.OPEN_BAZEL_PROJECT_FILE,
-			Commands.CONVERT_PROJECT_WORKSPACE,
+			Commands.CLEAN_GENERATED_PROJECTS,
+			Commands.CLEAN_BUNDLE_CACHE,
+			Commands.FULL_RESET,
 		].sort();
 
 		const foundBazelJavaCommands = commands

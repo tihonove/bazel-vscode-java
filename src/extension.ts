@@ -19,10 +19,10 @@ import {
 import { getBazelProjectFile } from './bazelprojectparser';
 import { BazelTaskManager } from './bazelTaskManager';
 import { registerBuildifierFormatter } from './buildifier';
+import { Cleanup } from './cleanup';
 import { Commands, executeJavaLanguageServerCommand } from './commands';
 import { BazelVscodeExtensionAPI } from './extension.api';
 import { registerLSClient } from './loggingTCPServer';
-import { ProjectViewManager } from './projectViewManager';
 import { BazelRunTargetProvider } from './provider/bazelRunTargetProvider';
 import { BazelTaskProvider } from './provider/bazelTaskProvider';
 import { ExtensionOtel, registerMetrics } from './tracing/otelUtils';
@@ -89,7 +89,6 @@ export async function activate(
 			openBazelProjectFile();
 			showBazelprojectConfig.update('open', false); // only open this file on the first activation of this extension
 		}
-		syncProjectViewDirectories();
 		context.subscriptions.push(
 			commands.registerCommand(Commands.OPEN_BAZEL_PROJECT_FILE, () =>
 				openBazelProjectFile()
@@ -101,16 +100,24 @@ export async function activate(
 		commands.registerCommand(Commands.SYNC_PROJECTS_CMD, syncProjectView)
 	);
 	context.subscriptions.push(
-		commands.registerCommand(
-			Commands.SYNC_DIRECTORIES_ONLY,
-			syncProjectViewDirectories
-		)
-	);
-	context.subscriptions.push(
 		commands.registerCommand(Commands.UPDATE_CLASSPATHS_CMD, updateClasspaths)
 	);
 	context.subscriptions.push(
 		commands.registerCommand(Commands.DEBUG_LS_CMD, runLSCmd)
+	);
+	context.subscriptions.push(
+		commands.registerCommand(
+			Commands.CLEAN_GENERATED_PROJECTS,
+			Cleanup.cleanGeneratedProjects
+		)
+	);
+	context.subscriptions.push(
+		commands.registerCommand(Commands.CLEAN_BUNDLE_CACHE, () =>
+			Cleanup.cleanBundleCache(context)
+		)
+	);
+	context.subscriptions.push(
+		commands.registerCommand(Commands.FULL_RESET, () => Cleanup.fullReset(context))
 	);
 	context.subscriptions.push(
 		commands.registerCommand(
@@ -131,23 +138,7 @@ export async function activate(
 		)
 	);
 
-	context.subscriptions.push(
-		commands.registerCommand(
-			Commands.CONVERT_PROJECT_WORKSPACE,
-			ProjectViewManager.covertToMultiRoot
-		)
-	);
-
 	registerBuildifierFormatter();
-
-	// if this is a multi-root project, create a listener to refresh the symlinked project root directory on file add/remove
-	if (ProjectViewManager.isMultiRoot()) {
-		const w = workspace.createFileSystemWatcher(
-			new RelativePattern(workspaceRoot, '*')
-		);
-		w.onDidCreate((_e) => ProjectViewManager.syncWorkspaceRoot());
-		w.onDidDelete((_e) => ProjectViewManager.syncWorkspaceRoot());
-	}
 
 	// trigger a refresh of the tree view when any task get executed
 	tasks.onDidStartTask((_) => BazelRunTargetProvider.instance.refresh());
@@ -190,9 +181,7 @@ function syncProjectView(): void {
 			.then(() => commands.executeCommand('workbench.action.reloadWindow'));
 	}
 
-	executeJavaLanguageServerCommand(Commands.SYNC_PROJECTS).then(
-		syncProjectViewDirectories
-	);
+	executeJavaLanguageServerCommand(Commands.SYNC_PROJECTS);
 }
 
 function updateClasspaths() {
@@ -239,13 +228,11 @@ function toggleBazelProjectSyncStatus(doc: TextDocument) {
 		window
 			.showWarningMessage(
 				`The Bazel Project View changed. Do you want to synchronize? [details](https://github.com/salesforce/bazel-eclipse/blob/main/docs/common/projectviews.md#project-views)`,
-				...['Java Projects', 'Only Directories', 'Do Nothing']
+				...['Java Projects', 'Do Nothing']
 			)
 			.then((val) => {
 				if (val === 'Java Projects') {
 					syncProjectView();
-				} else if (val === 'Only Directories') {
-					syncProjectViewDirectories();
 				} else if (val === 'Do Nothing') {
 					workspace
 						.getConfiguration('bazel.projectview')
@@ -253,10 +240,6 @@ function toggleBazelProjectSyncStatus(doc: TextDocument) {
 				}
 			});
 	}
-}
-
-function syncProjectViewDirectories() {
-	ProjectViewManager.updateProjectView();
 }
 
 function openBazelProjectFile() {

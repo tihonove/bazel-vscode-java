@@ -7,7 +7,7 @@
 		"tihonove"
 	],
 	"license": "BSD-3-Clause",
-	"version": "1.4.1",
+	"version": "1.4.2",
 	"publisher": "tihonove",
 	"preview": true,
 	"engines": {
@@ -146,12 +146,6 @@
 					"description": "Open the Bazel Project View file on extension activation",
 					"scope": "window"
 				},
-				"bazel.projectview.updateFileWatcherExclusion": {
-					"type": "boolean",
-					"default": true,
-					"description": "update the files.watcherExclude setting to only watch directories specified in the .bazelproject file.",
-					"scope": "window"
-				},
 				"bazel.projectview.notification": {
 					"type": "boolean",
 					"default": true,
@@ -200,11 +194,6 @@
 				"category": "Java"
 			},
 			{
-				"command": "java.bazel.syncDirectoriesOnly.command",
-				"title": "Synchronize only directories",
-				"category": "Bazel"
-			},
-			{
 				"command": "java.bazel.updateClasspaths.command",
 				"title": "Refresh classpath from Bazel BUILD file",
 				"category": "Java"
@@ -243,8 +232,18 @@
 				"category": "Bazel"
 			},
 			{
-				"command": "bazel.convert.workspace",
-				"title": "Convert to Multi-Root workspace",
+				"command": "bazel.cleanup.generatedProjects",
+				"title": "Clean generated Eclipse projects",
+				"category": "Bazel"
+			},
+			{
+				"command": "bazel.cleanup.bundleCache",
+				"title": "Clean Java language server bundle cache (all profiles)",
+				"category": "Bazel"
+			},
+			{
+				"command": "bazel.cleanup.fullReset",
+				"title": "Full reset of Java/Bazel IDE state",
 				"category": "Bazel"
 			}
 		],
