@@ -9,6 +9,14 @@
 	"license": "BSD-3-Clause",
 	"version": "1.4.4",
 	"publisher": "tihonove",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/tihonove/bazel-vscode-java.git"
+	},
+	"bugs": {
+		"url": "https://github.com/tihonove/bazel-vscode-java/issues"
+	},
+	"homepage": "https://github.com/tihonove/bazel-vscode-java#readme",
 	"preview": true,
 	"engines": {
 		"vscode": "^1.80.0"

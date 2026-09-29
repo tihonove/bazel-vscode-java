@@ -63,11 +63,22 @@ Recommended settings for large repositories:
 [Troubleshoot tips](https://github.com/eclipseguru/bazel-vscode-java/blob/main/docs/troubleshoot.md)
 from the upstream project may be useful if it doesn't "just work".
 
+## Sources
+
+- Extension: https://github.com/tihonove/bazel-vscode-java (branch
+  `tihonove/fork`, on top of `eclipseguru/bazel-vscode-java`).
+- Language-server bundles (BJLS): https://github.com/tihonove/bazel-eclipse
+  (branch `tihonove/bazel9`, on top of the archived `salesforce/bazel-eclipse`
+  main). Every change is marked `LOCAL PATCH` in the sources.
+
 ## Building
 
 The packaged language-server bundles are taken from a pre-built jar set
 (`npm run build:server` copies them from a local directory; see
-`scripts/server.mjs`, command `copy-server <jars-dir>`):
+`scripts/server.mjs`, command `copy-server <jars-dir>`). They are built from
+the `bazel-eclipse` fork above with
+`./mvnw -DskipTests verify` (JDK 21) and taken from
+`releng/p2repository/target/repository/plugins/`:
 
 ```sh
 npm ci
