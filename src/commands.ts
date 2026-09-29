@@ -19,6 +19,13 @@ export namespace Commands {
 	export const SYNC_PROJECTS_CMD = 'java.bazel.syncProjects.command';
 
 	/**
+	 * Incrementally refresh all projects of a Bazel workspace from disk
+	 * (after a branch switch / pull): resources, changed BUILD files, dependent classpaths.
+	 */
+	export const REFRESH_PROJECTS = 'java.bazel.refreshProjects';
+	export const REFRESH_PROJECTS_CMD = 'java.bazel.refreshProjects.command';
+
+	/**
 	 * Connect our output window
 	 */
 	export const REGISTER_BAZEL_TCP_SERVER_PORT =

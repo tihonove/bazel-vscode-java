@@ -4,8 +4,10 @@ import { join } from 'path';
 import { format } from 'util';
 import {
 	ExtensionContext,
+	ProgressLocation,
 	RelativePattern,
 	TextDocument,
+	Uri,
 	commands,
 	extensions,
 	tasks,
@@ -103,6 +105,9 @@ export async function activate(
 		commands.registerCommand(Commands.UPDATE_CLASSPATHS_CMD, updateClasspaths)
 	);
 	context.subscriptions.push(
+		commands.registerCommand(Commands.REFRESH_PROJECTS_CMD, refreshProjects)
+	);
+	context.subscriptions.push(
 		commands.registerCommand(Commands.DEBUG_LS_CMD, runLSCmd)
 	);
 	context.subscriptions.push(
@@ -184,13 +189,85 @@ function syncProjectView(): void {
 	executeJavaLanguageServerCommand(Commands.SYNC_PROJECTS);
 }
 
-function updateClasspaths() {
+function updateClasspaths(resource?: Uri) {
 	if (!isRedhatJavaReady()) {
 		window.showErrorMessage(
 			'Unable to update classpath. Java language server is not ready'
 		);
 		return;
 	}
+	// invoked from the explorer context menu with the selected resource,
+	// from the command palette without arguments (use the active editor)
+	const uri = resource ?? window.activeTextEditor?.document.uri;
+	if (!uri) {
+		window.showErrorMessage(
+			'Unable to update classpath. Select a file or folder of a Bazel project first'
+		);
+		return;
+	}
+	executeJavaLanguageServerCommand(
+		Commands.UPDATE_CLASSPATHS,
+		uri.toString()
+	).then(
+		() => {},
+		(err) => window.showErrorMessage(`Unable to update classpath: ${err}`)
+	);
+}
+
+interface RefreshProjectsResult {
+	refreshedProjects: number;
+	reprovisionedProjects: string[];
+	classpathsRefreshed: number;
+	fullSyncRequired: boolean;
+	messages: string[];
+}
+
+/**
+ * Incremental refresh of the Bazel projects: resources from disk, packages
+ * with changed BUILD files and the classpaths depending on them. Use it after
+ * a branch switch or pull instead of a full synchronization.
+ */
+function refreshProjects() {
+	if (!isRedhatJavaReady()) {
+		window.showErrorMessage(
+			'Unable to refresh projects. Java language server is not ready'
+		);
+		return;
+	}
+	window.withProgress(
+		{
+			location: ProgressLocation.Notification,
+			title: 'Bazel: refreshing Java projects from disk',
+		},
+		() =>
+			executeJavaLanguageServerCommand<RefreshProjectsResult>(
+				Commands.REFRESH_PROJECTS
+			).then(
+				(result) => {
+					const reprovisioned = result?.reprovisionedProjects ?? [];
+					const summary =
+						`Bazel: refreshed ${result?.refreshedProjects ?? 0} project(s)` +
+						(reprovisioned.length > 0
+							? `, re-imported ${reprovisioned.length} package(s) with changed BUILD files (${reprovisioned.join(', ')}), updated ${result?.classpathsRefreshed ?? 0} classpath(s)`
+							: ', no BUILD file changes');
+					if (result?.fullSyncRequired) {
+						window
+							.showWarningMessage(
+								`${summary}. A full synchronization is required: ${(result.messages ?? []).join(' ')}`,
+								'Synchronize Projects'
+							)
+							.then((val) => {
+								if (val === 'Synchronize Projects') {
+									syncProjectView();
+								}
+							});
+					} else {
+						window.showInformationMessage(summary);
+					}
+				},
+				(err) => window.showErrorMessage(`Bazel project refresh failed: ${err}`)
+			)
+	);
 }
 
 function runLSCmd() {

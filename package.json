@@ -7,7 +7,7 @@
 		"tihonove"
 	],
 	"license": "BSD-3-Clause",
-	"version": "1.4.3",
+	"version": "1.4.4",
 	"publisher": "tihonove",
 	"preview": true,
 	"engines": {
@@ -199,6 +199,11 @@
 				"category": "Java"
 			},
 			{
+				"command": "java.bazel.refreshProjects.command",
+				"title": "Refresh Bazel Projects (after branch switch / pull)",
+				"category": "Java"
+			},
+			{
 				"command": "java.bazel.debug.command",
 				"title": "Debug LS",
 				"category": "Bazel"
@@ -266,6 +271,10 @@
 					"when": "javaLSReady && isFileSystemResource"
 				},
 				{
+					"command": "java.bazel.refreshProjects.command",
+					"when": "javaLSReady"
+				},
+				{
 					"command": "java.bazel.debug.command",
 					"when": "javaLSReady && isFileSystemResource"
 				},
@@ -296,6 +305,11 @@
 					"command": "java.bazel.updateClasspaths.command",
 					"when": "javaLSReady && isFileSystemResource",
 					"group": "1_javaactions@11"
+				},
+				{
+					"command": "java.bazel.refreshProjects.command",
+					"when": "javaLSReady",
+					"group": "1_javaactions@12"
 				}
 			],
 			"view/title": [

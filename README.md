@@ -28,6 +28,15 @@ extension (BJLS) with the following fixes on top:
 - **Classpath fixes**: `java_proto_library` jars included in the classpath,
   no NPE on targets without an owner label, no ghost "invisible projects" when
   opening subdirectories of a Bazel workspace (multi-root setups).
+- **Incremental refresh instead of a full re-sync** (1.4.4): on start the
+  projects of an already imported workspace are refreshed from disk, so files
+  that appeared while VS Code was closed (branch switch, pull) no longer show
+  up as unresolved types. The new command *Java: Refresh Bazel Projects (after
+  branch switch / pull)* does the same on demand and additionally re-imports
+  only the packages whose `BUILD` file changed (plus the classpaths depending
+  on them); it tells you when a full synchronization is really needed (changed
+  project view, new or removed packages). Editing a `BUILD` file now triggers
+  this incremental update instead of a full workspace synchronization.
 
 ## Getting Started
 
