@@ -37,6 +37,10 @@ extension (BJLS) with the following fixes on top:
   on them); it tells you when a full synchronization is really needed (changed
   project view, new or removed packages). Editing a `BUILD` file now triggers
   this incremental update instead of a full workspace synchronization.
+  1.4.5: on the first run after the upgrade a package whose `BUILD` file is
+  newer than its saved classpath is treated as changed (1.4.4 silently took
+  the current `BUILD` files as the baseline, so packages that changed since
+  the last synchronization kept their stale classpath).
 
 ## Getting Started
 
