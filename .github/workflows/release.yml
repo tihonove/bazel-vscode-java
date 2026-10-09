@@ -1,0 +1,200 @@
+name: Release
+
+# Builds the vsix with the patched BJLS server jars and publishes it to the
+# VS Code Marketplace, then Open VSX, then attaches it to the GitHub release.
+#
+# Trigger: push a tag v<version> matching package.json, or run manually for an
+# existing tag. Each publish job skips when the version is already there, so a
+# failed run can be finished with "Re-run failed jobs" (same vsix artifact).
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release (v<version>)"
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+  EXTENSION_ID: tihonove.bazel-java-tihonove
+  # Pinned BJLS server build: a release asset of the bazel-eclipse fork.
+  # Update all three together; the build fails on a sha256 mismatch.
+  BJLS_REPO: tihonove/bazel-eclipse
+  BJLS_TAG: v1.4.7
+  BJLS_ASSET: p2-repository.zip
+  BJLS_SHA256: 59f3637066ca4557d7438c50c978d5f11632ba0f7f2f7b038c3376564a99b748
+
+jobs:
+  build:
+    name: Build vsix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      vsix: ${{ steps.package.outputs.vsix }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ env.TAG }}
+
+      - name: Check tag matches package.json version
+        id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$TAG" ]; then
+            echo "::error::tag $TAG does not match package.json version $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch pinned BJLS server jars
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$BJLS_TAG" ] || [ -z "$BJLS_ASSET" ] || [ -z "$BJLS_SHA256" ]; then
+            echo "::error::BJLS_TAG / BJLS_ASSET / BJLS_SHA256 are not set in release.yml"
+            exit 1
+          fi
+          dl="$RUNNER_TEMP/bjls"
+          mkdir -p "$dl/unpacked"
+          gh release download "$BJLS_TAG" -R "$BJLS_REPO" -p "$BJLS_ASSET" -D "$dl"
+          echo "$BJLS_SHA256  $dl/$BJLS_ASSET" | sha256sum -c -
+          case "$BJLS_ASSET" in
+            *.zip) unzip -q "$dl/$BJLS_ASSET" -d "$dl/unpacked" ;;
+            *.tar.gz|*.tgz) tar -xzf "$dl/$BJLS_ASSET" -C "$dl/unpacked" ;;
+            *) echo "::error::unsupported asset type: $BJLS_ASSET"; exit 1 ;;
+          esac
+          # package.json build:server copies the jars from ../../known-good/server;
+          # p2 bundle names carry an OSGi version suffix, the declared names do not
+          server="$GITHUB_WORKSPACE/../../known-good/server"
+          mkdir -p "$server"
+          # a p2 repository keeps the bundles in plugins/, next to features/ and metadata jars
+          jars="$dl/unpacked"
+          if [ -d "$jars/plugins" ]; then jars="$jars/plugins"; fi
+          find "$jars" -name '*.jar' -print0 | while IFS= read -r -d '' jar; do
+            name=$(basename "$jar" | sed -E 's/_[0-9]+\.[0-9]+\.[0-9]+(\.[^.]+)?\.jar$/.jar/')
+            cp "$jar" "$server/$name"
+          done
+          ls -l "$server"
+
+      - name: Setup Node version
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🏗 Build and package
+        id: package
+        run: |
+          npm run package
+          vsix="bazel-java-tihonove-${{ steps.version.outputs.version }}.vsix"
+          test -f "$vsix"
+          # every jar declared in contributes.javaExtensions must be inside the vsix
+          node -p "require('./package.json').contributes.javaExtensions.join('\n')" | sed 's|^\./|extension/|' | sort > declared.txt
+          unzip -Z1 "$vsix" | grep '^extension/server/.*\.jar$' | sort > packed.txt
+          missing=$(comm -23 declared.txt packed.txt)
+          if [ -n "$missing" ]; then
+            echo "::error::server jars missing from the vsix: $missing"
+            exit 1
+          fi
+          sha256sum "$vsix"
+          echo "vsix=$vsix" >> "$GITHUB_OUTPUT"
+
+      - name: Upload vsix
+        uses: actions/upload-artifact@v5
+        with:
+          name: vsix
+          path: ${{ steps.package.outputs.vsix }}
+          if-no-files-found: error
+
+  marketplace:
+    name: Publish to VS Code Marketplace
+    needs: build
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - name: Download vsix
+        uses: actions/download-artifact@v5
+        with:
+          name: vsix
+
+      - name: 🚀 Publish
+        env:
+          VSCE_PAT: ${{ secrets.VSC_MKTP_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+          VSIX: ${{ needs.build.outputs.vsix }}
+        run: |
+          if npx --yes @vscode/vsce@3.6.0 show "$EXTENSION_ID" --json > show.json 2>/dev/null \
+            && jq -e --arg v "$VERSION" '.versions[] | select(.version == $v)' show.json > /dev/null; then
+            echo "$EXTENSION_ID@$VERSION is already on the Marketplace, skipping"
+            exit 0
+          fi
+          npx --yes @vscode/vsce@3.6.0 publish --packagePath "$VSIX"
+
+  openvsx:
+    name: Publish to Open VSX
+    needs: [build, marketplace]
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - name: Download vsix
+        uses: actions/download-artifact@v5
+        with:
+          name: vsix
+
+      - name: 🚀 Publish
+        env:
+          OVSX_PAT: ${{ secrets.OPEN_VSX_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+          VSIX: ${{ needs.build.outputs.vsix }}
+        run: |
+          url="https://open-vsx.org/api/${EXTENSION_ID/.//}/$VERSION"
+          status=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+          if [ "$status" = "200" ]; then
+            echo "$EXTENSION_ID@$VERSION is already on Open VSX, skipping"
+            exit 0
+          fi
+          npx --yes ovsx@1.2.0 publish "$VSIX"
+
+  github-release:
+    name: Attach vsix to GitHub release
+    needs: [build, openvsx]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download vsix
+        uses: actions/download-artifact@v5
+        with:
+          name: vsix
+
+      - name: 📎 Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VSIX: ${{ needs.build.outputs.vsix }}
+        run: |
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$VSIX" -R "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" "$VSIX" -R "$GITHUB_REPOSITORY" \
+              --verify-tag --title "$TAG" --generate-notes
+          fi
