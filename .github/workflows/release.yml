@@ -30,9 +30,9 @@ env:
   # Pinned BJLS server build: a release asset of the bazel-eclipse fork.
   # Update all three together; the build fails on a sha256 mismatch.
   BJLS_REPO: tihonove/bazel-eclipse
-  BJLS_TAG: v1.4.7
+  BJLS_TAG: v1.4.8
   BJLS_ASSET: p2-repository.zip
-  BJLS_SHA256: 59f3637066ca4557d7438c50c978d5f11632ba0f7f2f7b038c3376564a99b748
+  BJLS_SHA256: 99bdaac3bf613ec59bd1ad455a0bc8666a59622315cd2130b9f14299ed3b95af
 
 jobs:
   build:
